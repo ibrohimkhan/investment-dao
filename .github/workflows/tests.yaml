@@ -59,3 +59,4 @@ jobs:
 
     - name: Test contracts
       run: cargo test --manifest-path contracts/dao/Cargo.toml
+      run: cargo test --manifest-path contracts/governance-token/Cargo.toml
