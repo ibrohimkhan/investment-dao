@@ -13,11 +13,11 @@ mod governance_token {
     #[ink(storage)]
     #[derive(Default, Storage)]
     pub struct GovernanceToken {
-    	#[storage_field]
-		psp22: psp22::Data,
+        #[storage_field]
+        psp22: psp22::Data,
 
-		#[storage_field]
-		metadata: metadata::Data,
+        #[storage_field]
+        metadata: metadata::Data,
 
         balances: Mapping<AccountId, Balance>,
 
@@ -25,23 +25,33 @@ mod governance_token {
 
         circulating_supply: Balance,
     }
-    
+
     impl GovernanceToken {
         #[ink(constructor)]
-        pub fn new(initial_supply: Balance, name: Option<String>, symbol: Option<String>, decimal: u8) -> Self {
+        pub fn new(
+            initial_supply: Balance,
+            name: Option<String>,
+            symbol: Option<String>,
+            decimal: u8,
+        ) -> Self {
             let mut _instance = Self::default();
 
-			psp22::Internal::_mint_to(&mut _instance, Self::env().caller(), initial_supply).expect("Should mint"); 
-			
+            psp22::Internal::_mint_to(
+                &mut _instance,
+                Self::env().caller(),
+                initial_supply,
+            )
+            .expect("Should mint");
+
             _instance.metadata.name.set(&name);
-			_instance.metadata.symbol.set(&symbol);
-			_instance.metadata.decimals.set(&decimal);
+            _instance.metadata.symbol.set(&symbol);
+            _instance.metadata.decimals.set(&decimal);
 
             _instance.balances = Mapping::default();
             _instance.total_supply = initial_supply;
             _instance.circulating_supply = 0;
 
-			_instance
+            _instance
         }
 
         // A way to drop some tokens to users for voting
@@ -50,7 +60,8 @@ mod governance_token {
             if amount + self.circulating_supply < self.total_supply {
                 let recipient_balance = self.balance_of(recipient);
 
-                self.balances.insert(recipient, &(recipient_balance + amount));
+                self.balances
+                    .insert(recipient, &(recipient_balance + amount));
                 self.circulating_supply += amount;
             }
         }
@@ -58,7 +69,7 @@ mod governance_token {
         #[ink(message)]
         pub fn weight(&self, account: AccountId) -> u64 {
             let balance = self.balances.get(account).unwrap_or_default();
-            (balance  * 100 / self.total_supply) as u64
+            (balance * 100 / self.total_supply) as u64
         }
 
         #[ink(message)]
@@ -81,14 +92,24 @@ mod governance_token {
 
         #[ink::test]
         fn new_works() {
-            let contract = GovernanceToken::new(1000, Some("VoteCoin".into()), Some("VCT".into()), 8);
+            let contract = GovernanceToken::new(
+                1000,
+                Some("VoteCoin".into()),
+                Some("VCT".into()),
+                8,
+            );
             assert_eq!(contract.total_supply, 1000);
             assert_eq!(contract.circulating_supply, 0);
         }
 
         #[ink::test]
         fn transfer_to_works() {
-            let mut contract = GovernanceToken::new(1000, Some("VoteCoin".into()), Some("VCT".into()), 8);
+            let mut contract = GovernanceToken::new(
+                1000,
+                Some("VoteCoin".into()),
+                Some("VCT".into()),
+                8,
+            );
             assert_eq!(contract.total_supply, 1000);
 
             contract.transfer_to(alice(), 10);
@@ -98,7 +119,8 @@ mod governance_token {
 
         #[ink::test]
         fn weight_works() {
-            let mut contract = GovernanceToken::new(100, Some("VoteCoin".into()), Some("VCT".into()), 8);
+            let mut contract =
+                GovernanceToken::new(100, Some("VoteCoin".into()), Some("VCT".into()), 8);
             assert_eq!(contract.total_supply, 100);
 
             contract.transfer_to(alice(), 3);

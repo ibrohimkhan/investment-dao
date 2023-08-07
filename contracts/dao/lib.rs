@@ -3,10 +3,17 @@
 #[ink::contract]
 mod dao {
     use ink::storage::Mapping;
-    use scale::{Decode, Encode};
+    use scale::{
+        Decode,
+        Encode,
+    };
 
     use ink::env::{
-        call::{build_call, ExecutionInput, Selector},
+        call::{
+            build_call,
+            ExecutionInput,
+            Selector,
+        },
         DefaultEnvironment,
     };
 
@@ -30,6 +37,7 @@ mod dao {
         VotePeriodEnded,
         AlreadyVoted,
         TransferFailed,
+        ContractCallFailed,
     }
 
     #[derive(Encode, Decode)]
@@ -100,21 +108,21 @@ mod dao {
             duration: u64,
         ) -> Result<(), DaoError> {
             if amount == 0 {
-                return Err(DaoError::AmountShouldNotBeZero);
+                return Err(DaoError::AmountShouldNotBeZero)
             }
 
             if amount > self.env().balance() {
-                return Err(DaoError::AmountShouldNotExceedTheBalance);
+                return Err(DaoError::AmountShouldNotExceedTheBalance)
             }
 
             if duration == 0 {
-                return Err(DaoError::DurationError);
+                return Err(DaoError::DurationError)
             }
 
             let time = self.env().block_timestamp();
             let proposal = Proposal {
-                to: to,
-                amount: amount,
+                to,
+                amount,
                 vote_start: time,
                 vote_end: (time + duration * 60),
                 executed: false,
@@ -134,22 +142,22 @@ mod dao {
             };
 
             if proposal.executed {
-                return Err(DaoError::ProposalAlreadyExecuted);
+                return Err(DaoError::ProposalAlreadyExecuted)
             }
 
             let current_time = self.env().block_timestamp();
             if current_time > proposal.vote_end {
-                return Err(DaoError::VotePeriodEnded);
+                return Err(DaoError::VotePeriodEnded)
             }
 
             let caller = self.env().caller();
             if self.votes.contains((proposal_id, caller)) {
-                return Err(DaoError::AlreadyVoted);
+                return Err(DaoError::AlreadyVoted)
             }
 
             self.votes.insert((proposal_id, caller), &());
 
-            let weight = build_call::<DefaultEnvironment>()
+            let weight = match build_call::<DefaultEnvironment>()
                 .call(self.governance_token)
                 .gas_limit(5000000000)
                 .exec_input(
@@ -157,29 +165,45 @@ mod dao {
                         .push_arg(caller),
                 )
                 .returns::<u64>()
-                .invoke();
+                .try_invoke()
+            {
+                Ok(Ok(result)) => result,
+                _ => return Err(DaoError::ContractCallFailed),
+            };
 
             let proposal_vote = match self.proposal_votes.get(&proposal) {
-                Some(votes) => match vote {
-                    VoteType::Against => ProposalVote {
-                        against_vote: votes.against_vote + weight,
-                        for_votes: votes.for_votes,
-                    },
-                    VoteType::For => ProposalVote {
-                        against_vote: votes.against_vote,
-                        for_votes: votes.for_votes + weight,
-                    },
-                },
-                None => match vote {
-                    VoteType::Against => ProposalVote {
-                        against_vote: weight,
-                        for_votes: 0,
-                    },
-                    VoteType::For => ProposalVote {
-                        against_vote: 0,
-                        for_votes: weight,
-                    },
-                },
+                Some(votes) => {
+                    match vote {
+                        VoteType::Against => {
+                            ProposalVote {
+                                against_vote: votes.against_vote + weight,
+                                for_votes: votes.for_votes,
+                            }
+                        }
+                        VoteType::For => {
+                            ProposalVote {
+                                against_vote: votes.against_vote,
+                                for_votes: votes.for_votes + weight,
+                            }
+                        }
+                    }
+                }
+                None => {
+                    match vote {
+                        VoteType::Against => {
+                            ProposalVote {
+                                against_vote: weight,
+                                for_votes: 0,
+                            }
+                        }
+                        VoteType::For => {
+                            ProposalVote {
+                                against_vote: 0,
+                                for_votes: weight,
+                            }
+                        }
+                    }
+                }
             };
 
             self.proposal_votes.insert(proposal, &proposal_vote);
@@ -195,29 +219,29 @@ mod dao {
             };
 
             if proposal.executed {
-                return Err(DaoError::ProposalAlreadyExecuted);
+                return Err(DaoError::ProposalAlreadyExecuted)
             }
 
             match self.proposal_votes.get(&proposal) {
                 Some(proposal_votes) => {
-                    if self.quorum > (proposal_votes.for_votes + proposal_votes.against_vote) {
-                        return Err(DaoError::QuorumNotReached);
+                    if self.quorum
+                        > (proposal_votes.for_votes + proposal_votes.against_vote)
+                    {
+                        return Err(DaoError::QuorumNotReached)
                     }
 
                     if proposal_votes.for_votes < proposal_votes.against_vote {
-                        return Err(DaoError::ProposalNotAccepted);
+                        return Err(DaoError::ProposalNotAccepted)
                     }
                 }
-                None => {
-                    return Err(DaoError::QuorumNotReached);
-                }
+                None => return Err(DaoError::QuorumNotReached),
             }
 
             proposal.executed = true;
             self.proposals.insert(proposal_id, &proposal);
 
             if let Err(_) = self.env().transfer(proposal.to, proposal.amount) {
-                return Err(DaoError::TransferFailed);
+                return Err(DaoError::TransferFailed)
             }
 
             Ok(())
@@ -245,7 +269,8 @@ mod dao {
             ink::env::test::callee::<ink::env::DefaultEnvironment>()
         }
 
-        fn default_accounts() -> ink::env::test::DefaultAccounts<ink::env::DefaultEnvironment> {
+        fn default_accounts(
+        ) -> ink::env::test::DefaultAccounts<ink::env::DefaultEnvironment> {
             ink::env::test::default_accounts::<ink::env::DefaultEnvironment>()
         }
 
@@ -254,11 +279,16 @@ mod dao {
         }
 
         fn set_balance(account_id: AccountId, balance: Balance) {
-            ink::env::test::set_account_balance::<ink::env::DefaultEnvironment>(account_id, balance)
+            ink::env::test::set_account_balance::<ink::env::DefaultEnvironment>(
+                account_id, balance,
+            )
         }
 
         fn get_balance(account_id: AccountId) -> Balance {
-            ink::env::test::get_account_balance::<ink::env::DefaultEnvironment>(account_id).unwrap_or_default()
+            ink::env::test::get_account_balance::<ink::env::DefaultEnvironment>(
+                account_id,
+            )
+            .unwrap_or_default()
         }
 
         #[ink::test]
@@ -294,7 +324,7 @@ mod dao {
                     to: accounts.django,
                     amount: 100,
                     vote_start: 0,
-                    vote_end: now + 1 * 60, //ONE_MINUTE,
+                    vote_end: now + 1 * 60, // ONE_MINUTE,
                     executed: false,
                 }
             );
@@ -314,6 +344,21 @@ mod dao {
         }
 
         #[ink::test]
+        fn vote_panics() {
+            let mut governor = Governor::new(AccountId::from([0x01; 32]), 1);
+            let result = governor.propose(default_accounts().eve, 100, 100);
+
+            assert_eq!(result, Ok(()));
+            assert_eq!(governor.next_proposal_id, 1);
+
+            let result = std::panic::catch_unwind(move || {
+                governor.vote(governor.next_proposal_id, VoteType::For)
+            });
+
+            assert!(result.is_err());
+        }
+
+        #[ink::test]
         fn execute_works() {
             let accounts = default_accounts();
             let mut governor = create_contract(1000);
@@ -322,20 +367,20 @@ mod dao {
             assert_eq!(result, Ok(()));
 
             let proposal = governor.proposals.get(1).unwrap();
-            
+
             let proposal_vote = ProposalVote {
                 against_vote: 29,
                 for_votes: 35,
             };
-            
+
             governor.proposal_votes.insert(proposal, &proposal_vote);
-            
+
             let result = governor.execute(1);
             assert_eq!(result, Ok(()));
-            
+
             let proposal = governor.proposals.get(1).unwrap();
             assert!(proposal.executed);
-            
+
             assert_eq!(get_balance(contract_id()), 900);
         }
     }
