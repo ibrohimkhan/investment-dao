@@ -10,31 +10,33 @@ on:
 env:
   NODE_JS_VER: 18.x
   SWANKY_NODE_VER: v1.6.0
-fmt:
-  name: Cargo fmt
-  runs-on: ubuntu-latest
-  steps:
-  - name: Checkout sources
-    uses: actions/checkout@v3
-
-  - name: Install Rust nightly toolchain
-    uses: actions-rs/toolchain@v1
-    with:
-      profile: minimal
-      toolchain: stable
-      override: true
-      components: rustfmt
-
-  - name: Rust Cache
-    uses: actions/cache@v3
-
-  - name: Cargo fmt
-    uses: actions-rs/cargo@v1.0.3
-    with:
-      command: fmt
-      args: --all -- --check
 jobs:
+  fmt:
+    name: Cargo fmt
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v3
+
+    - name: Install Rust nightly toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+        components: rustfmt
+
+    - name: Rust Cache
+      uses: actions/cache@v3
+
+    - name: Cargo fmt
+      uses: actions-rs/cargo@v1.0.3
+      with:
+        command: fmt
+        args: --all -- --check
+  
   run-tests:
+    name: Tests
     runs-on: ubuntu-latest
     steps:
     - name: Checkout the source code
