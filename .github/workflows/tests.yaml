@@ -11,29 +11,7 @@ env:
   NODE_JS_VER: 18.x
   SWANKY_NODE_VER: v1.6.0
 jobs:
-  fmt:
-    name: Cargo fmt
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v3
-
-    - name: Install Rust nightly toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        override: true
-        components: rustfmt
-
-    - name: Cargo fmt
-      uses: actions-rs/cargo@v1.0.3
-      with:
-        command: fmt
-        args: --all -- --check
-  
   run-tests:
-    name: Tests
     runs-on: ubuntu-latest
     steps:
     - name: Checkout the source code
@@ -56,6 +34,9 @@ jobs:
         key: ${{ runner.os }}-rust-${{ hashFiles('rust-toolchain.toml') }}
         restore-keys: |
           ${{ runner.os }}-rust
+    
+    - name: Cargo fmt
+      run: cargo fmt --all
 
     - name: Check if cargo-contract exists
       id: check-cargo-contract
