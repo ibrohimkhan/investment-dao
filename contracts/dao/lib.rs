@@ -135,7 +135,11 @@ mod dao {
         }
 
         #[ink(message)]
-        pub fn vote(&mut self, proposal_id: ProposalId, vote: VoteType) -> Result<(), DaoError> {
+        pub fn vote(
+            &mut self,
+            proposal_id: ProposalId,
+            vote: VoteType,
+        ) -> Result<(), DaoError> {
             let proposal = match self.proposals.get(proposal_id) {
                 Some(value) => value,
                 None => return Err(DaoError::ProposalNotFound),
@@ -213,7 +217,7 @@ mod dao {
 
         #[ink(message)]
         pub fn execute(&mut self, proposal_id: ProposalId) -> Result<(), DaoError> {
-            let mut proposal = match self.proposals.get(&proposal_id) {
+            let mut proposal = match self.proposals.get(proposal_id) {
                 Some(value) => value,
                 None => return Err(DaoError::ProposalNotFound),
             };
@@ -240,7 +244,7 @@ mod dao {
             proposal.executed = true;
             self.proposals.insert(proposal_id, &proposal);
 
-            if let Err(_) = self.env().transfer(proposal.to, proposal.amount) {
+            if self.env().transfer(proposal.to, proposal.amount).is_err() {
                 return Err(DaoError::TransferFailed)
             }
 

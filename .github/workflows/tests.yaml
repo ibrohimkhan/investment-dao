@@ -34,9 +34,6 @@ jobs:
         key: ${{ runner.os }}-rust-${{ hashFiles('rust-toolchain.toml') }}
         restore-keys: |
           ${{ runner.os }}-rust
-    
-    - name: Cargo fmt
-      run: cargo fmt --all
 
     - name: Check if cargo-contract exists
       id: check-cargo-contract
