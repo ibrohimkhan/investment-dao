@@ -26,9 +26,6 @@ jobs:
         override: true
         components: rustfmt
 
-    - name: Rust Cache
-      uses: actions/cache@v3
-
     - name: Cargo fmt
       uses: actions-rs/cargo@v1.0.3
       with:
