@@ -1,5 +1,5 @@
 [package]
-name = "governance_token"
+name = "governance-token"
 version = "0.1.0"
 authors = ["Ibrokhim Kholmatov"]
 edition = "2021"
@@ -17,10 +17,8 @@ openbrush = { tag = "4.0.0-beta", git = "https://github.com/Brushfam/openbrush-c
 ink_e2e = "4.2.0"
 
 [lib]
+name = "governance_token"
 path = "lib.rs"
-crate-type = [
-    "rlib",
-]
 
 [features]
 default = ["std"]
