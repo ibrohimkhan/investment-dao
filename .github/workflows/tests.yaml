@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - code-assignment-1
 env:
   NODE_JS_VER: 18.x
   SWANKY_NODE_VER: v1.6.0
@@ -57,4 +58,4 @@ jobs:
       run: swanky contract compile --all -v
 
     - name: Test contracts
-      run: cargo test --manifest-path contracts/dao/Cargo.toml
+      run: cargo test
